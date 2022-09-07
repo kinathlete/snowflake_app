@@ -3,6 +3,8 @@ import pandas
 import requests
 import snowflake.connector
 
+from urllib.error import URLError
+
 streamlit.title('My Parents New Healthy Diner')
 
 streamlit.header('Breakfast Favourites')
@@ -25,14 +27,24 @@ streamlit.dataframe(fruits_to_show)
 
 # New Section to display Fruityvice API response
 streamlit.header('Fruityvice Fruit Advice')
-fruit_choice = streamlit.text_input('What fruit would you like information about?','Kiwi')
+try:
+  fruit_choice = streamlit.text_input('What fruit would you like information about?','Kiwi')
+  if not fruit_choice:
+    streamlit.error("Please select a fruit to get information.")
+  else:
+    fruityvice_response = requests.get("https://fruityvice.com/api/fruit/" + fruit_choice)
+    # normalizing json response into a table
+    fruityvice_normalized = pandas.json_normalize(fruityvice_response.json())
+    # displaying the tabular response data
+    streamlit.dataframe(fruityvice_normalized)
+except URLError as e:
+  streamlit.error()
+
 streamlit.write('The user entered ', fruit_choice)
 
-fruityvice_response = requests.get("https://fruityvice.com/api/fruit/" + fruit_choice)
-# normalizing json response into a table
-fruityvice_normalized = pandas.json_normalize(fruityvice_response.json())
-# displaying the tabular response data
-streamlit.dataframe(fruityvice_normalized)
+
+
+streamlit.stop()
 
 # Querying data from Snowflake
 my_cnx = snowflake.connector.connect(**streamlit.secrets["snowflake"])
